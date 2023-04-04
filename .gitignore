@@ -1,0 +1,5 @@
+# Don't add your private token to the repo !
+.env
+# Python garbage
+__pycache__/
+database.db

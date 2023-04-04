@@ -2,4 +2,6 @@
 .env
 # Python garbage
 __pycache__/
-database.db
+venv/
+# Database depends on you
+xp_data.db

@@ -10,5 +10,5 @@ To make your own :
 - If you use Docker :
   - Build the image with `docker build -t xp-bot .`.
   - Run the bot with `docker run -it xp-bot`.
-  - Talk to the bot in private to setup everything !
-- Otherwise, simply find a way to run `python main.py` on your own.
+- Otherwise, simply find a way to get all the dependencies installed and run `python main.py` on your own.
+- Talk to the bot in private to setup everything !

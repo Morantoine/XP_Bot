@@ -15,48 +15,51 @@ from datetime import datetime, timedelta
 class XP_Bot:
     def __init__(self, TOKEN) -> None:
         # Start the app and start/load the database
-        self.bot = ApplicationBuilder().token(TOKEN).build()
+        self.app = ApplicationBuilder().token(TOKEN).build()
         self.db = XPDatabase()
 
         # Initlialize the dictionnary to track the cooldown
         self.last_changed = {}
         self.DELAY_TIME = timedelta(seconds=30)
 
+        # Initlialize the value of the last xp update message to only keep one
+        self.last_msg_id = {}
+
         # Add all the functionnality handlers
-        self.bot.add_handler(CommandHandler("start", self.start))
-        self.bot.add_handler(
+        self.app.add_handler(CommandHandler("start", self.start))
+        self.app.add_handler(
             CommandHandler(
                 "enable", self.enable, filters=filters.TEXT & filters.ChatType.GROUPS
             )
         )
-        self.bot.add_handler(
+        self.app.add_handler(
             CommandHandler(
                 "disable", self.disable, filters=filters.TEXT & filters.ChatType.GROUPS
             )
         )
-        self.bot.add_handler(
+        self.app.add_handler(
             CommandHandler(
                 "xp", self.check_xp, filters=filters.TEXT & filters.ChatType.GROUPS
             )
         )
-        self.bot.add_handler(
+        self.app.add_handler(
             CommandHandler(
                 "top", self.top_users, filters=filters.TEXT & filters.ChatType.GROUPS
             )
         )
-        self.bot.add_handler(
+        self.app.add_handler(
             MessageHandler(
                 filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS,
                 self.change_xp,
             )
         )
-        self.bot.add_handler(
+        self.app.add_handler(
             MessageHandler(
                 filters.ChatType.GROUPS & filters.StatusUpdate.LEFT_CHAT_MEMBER,
                 self.left_chat,
             )
         )
-        self.bot.add_handler(
+        self.app.add_handler(
             MessageHandler(
                 filters.StatusUpdate.NEW_CHAT_MEMBERS,
                 self.added_to_group,
@@ -64,7 +67,7 @@ class XP_Bot:
         )
 
     def run(self) -> None:
-        self.bot.run_polling()
+        self.app.run_polling()
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Prompt message when you start the bot"""
@@ -97,13 +100,10 @@ class XP_Bot:
 
         # Do nothing if user doesn't have the necessary rights
         elif member.status not in ["creator", "administrator"]:
-            bot_added_by = self.db.get_bot_added_by(chat_id)
-            if bot_added_by != user_id:
-                await context.bot.send_message(
-                    chat_id=update.effective_chat.id,
-                    text="Sólo los admins o el user que añadió el bot lo puede activar.",
-                )
-                return
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Sólo los admins pueden activar el bot.",
+            )
 
         else:
             success = self.db.enable_chat(chat_id)
@@ -135,13 +135,11 @@ class XP_Bot:
 
         # Do nothing if user doesn't have the necessary rights
         if member.status not in ["creator", "administrator"]:
-            bot_added_by = self.db.get_bot_added_by(chat_id)
-            if bot_added_by != user_id:
-                await context.bot.send_message(
-                    chat_id=update.effective_chat.id,
-                    text="Sólo los admins o el user que añadió el bot lo puede desactivar.",
-                )
-                return
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Sólo los admins o el user que añadió el bot lo puede desactivar.",
+            )
+            return
 
         success = self.db.disable_chat(chat_id)
         if success:
@@ -181,6 +179,12 @@ class XP_Bot:
     async def change_xp(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler to change the xp"""
         message = update.message
+        message_id = message.message_id
+
+        if message is None:
+            # Weird exception to handle
+            return
+
         message_text = message.text.lower()
         chat_id = message.chat_id
 
@@ -213,7 +217,7 @@ class XP_Bot:
             reciever_status = reciever_user.status
             reciever_name = message.reply_to_message.from_user.name
 
-            if reciever_id == sender_id or reciever_id == self.bot.bot.id:
+            if reciever_id == sender_id or reciever_id == self.app.bot.id:
                 # Don't allow people to change their own xp
                 return
 
@@ -222,7 +226,8 @@ class XP_Bot:
                 return
 
             xp_amount = 0
-            old_xp = self.db.get_user_xp(chat_id, reciever_id)
+            old_reciever_xp = self.db.get_user_xp(chat_id, reciever_id)
+            sender_xp = self.db.get_user_xp(chat_id, sender_id)
 
             if message_text == "+":
                 xp_amount = 1
@@ -249,14 +254,24 @@ class XP_Bot:
 
                 self.last_changed[(sender_id, reciever_id)] = datetime.now()
 
+                # Delete the last sent xp update message
+                if chat_id in self.last_msg_id:
+                    await context.bot.delete_message(
+                        chat_id=chat_id, message_id=self.last_msg_id[chat_id]
+                    )
+
                 self.db.update_user_xp(chat_id, reciever_id, xp_amount)
                 sender_medal = self.db.get_medal(chat_id=chat_id, user_id=sender_id)
                 reciever_medal = self.db.get_medal(chat_id=chat_id, user_id=reciever_id)
-                await context.bot.send_message(
+
+                new_message = await context.bot.send_message(
                     chat_id=update.effective_chat.id,
                     reply_to_message_id=update.message.id,
-                    text=f"{sender_medal}{sender_name} ha cambiado la reputación de {reciever_medal}{reciever_name} a {old_xp+xp_amount:+}.",  # ({xp_amount:+}).",
+                    text=f"{sender_medal}{sender_name} ({sender_xp}) ha cambiado la reputación de {reciever_medal}{reciever_name} ({old_reciever_xp+xp_amount:+}).",
                 )
+
+                # Keep in track the latest xp change message id
+                self.last_msg_id[chat_id] = new_message.message_id
 
     async def top_users(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler to display top users and ratings"""

@@ -218,7 +218,7 @@ class XP_Bot:
             reciever_name = message.reply_to_message.from_user.name
 
             if reciever_id == sender_id or reciever_id == self.app.bot.id:
-                # Don't allow people to change their own xp
+                # Don't allow people to change their own xp or the bot's xp
                 return
 
             if reciever_status in ["left", "kicked"]:
@@ -245,20 +245,17 @@ class XP_Bot:
                 )
                 elapsed_time = datetime.now() - last_change_time
                 if elapsed_time < self.DELAY_TIME:
-                    await context.bot.send_message(
+                    new_message = await context.bot.send_message(
                         chat_id=update.effective_chat.id,
                         reply_to_message_id=update.message.id,
                         text=f"Espera {int((self.DELAY_TIME - elapsed_time).total_seconds())} segundos antes de volver a cambiar la reputación de {reciever_name}.",
                     )
+                    await self.delete_refresh_xp_msg(
+                        new_message.message_id, chat_id, context
+                    )
                     return
 
                 self.last_changed[(sender_id, reciever_id)] = datetime.now()
-
-                # Delete the last sent xp update message
-                if chat_id in self.last_msg_id:
-                    await context.bot.delete_message(
-                        chat_id=chat_id, message_id=self.last_msg_id[chat_id]
-                    )
 
                 self.db.update_user_xp(chat_id, reciever_id, xp_amount)
                 sender_medal = self.db.get_medal(chat_id=chat_id, user_id=sender_id)
@@ -270,8 +267,19 @@ class XP_Bot:
                     text=f"{sender_medal}{sender_name} ({sender_xp}) ha cambiado la reputación de {reciever_medal}{reciever_name} ({old_reciever_xp+xp_amount:+}).",
                 )
 
-                # Keep in track the latest xp change message id
-                self.last_msg_id[chat_id] = new_message.message_id
+                await self.delete_refresh_xp_msg(
+                    new_message.message_id, chat_id, context
+                )
+
+    async def delete_refresh_xp_msg(self, new_msg_id, chat_id, context):
+        if chat_id in self.last_msg_id:
+            # Delete the last sent xp update message
+            if chat_id in self.last_msg_id:
+                await context.bot.delete_message(
+                    chat_id=chat_id, message_id=self.last_msg_id[chat_id]
+                )
+        # Keep in track the latest xp change message id
+        self.last_msg_id[chat_id] = new_msg_id
 
     async def top_users(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler to display top users and ratings"""

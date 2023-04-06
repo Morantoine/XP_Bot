@@ -217,8 +217,7 @@ class XP_Bot:
             reciever_status = reciever_user.status
             reciever_name = message.reply_to_message.from_user.name
 
-            # if reciever_id == sender_id or reciever_id == self.app.bot.id:
-            if reciever_id == sender_id:
+            if reciever_id == sender_id or reciever_id == self.app.bot.id:
                 # Don't allow people to change their own xp or the bot's xp
                 return
 
@@ -314,6 +313,9 @@ class XP_Bot:
                         medal = "🥉"
                     message += f"[{medal}] {member.full_name} ({xp:+})\n"
                 except:
+                    faulty_user = await context.bot.get_chat(user_id)
+                    faulty_username = faulty_user.username
+                    print(faulty_username)
                     pass
 
             if len(top_users) == 0:

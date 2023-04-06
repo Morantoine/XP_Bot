@@ -297,7 +297,7 @@ class XP_Bot:
             )
 
         else:
-            top_users = self.db.get_top_users(chat_id=chat_id)
+            top_users = self.db.get_top_users(chat_id=chat_id, limit=5)
             message = "Los más populares del patio :\n\n"
 
             for i, (user_id, xp) in enumerate(top_users):

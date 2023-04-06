@@ -313,9 +313,9 @@ class XP_Bot:
                         medal = "🥉"
                     message += f"[{medal}] {member.full_name} ({xp:+})\n"
                 except:
-                    faulty_user = await context.bot.get_chat(user_id)
-                    faulty_username = faulty_user.username
-                    print(faulty_username)
+                    # faulty_user = await context.bot.get_chat(user_id)
+                    # faulty_username = faulty_user.username
+                    # print(faulty_username)
                     pass
 
             if len(top_users) == 0:

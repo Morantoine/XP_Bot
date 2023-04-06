@@ -217,7 +217,8 @@ class XP_Bot:
             reciever_status = reciever_user.status
             reciever_name = message.reply_to_message.from_user.name
 
-            if reciever_id == sender_id or reciever_id == self.app.bot.id:
+            # if reciever_id == sender_id or reciever_id == self.app.bot.id:
+            if reciever_id == sender_id:
                 # Don't allow people to change their own xp or the bot's xp
                 return
 
@@ -298,17 +299,22 @@ class XP_Bot:
             message = "Los más populares del patio :\n\n"
 
             for i, (user_id, xp) in enumerate(top_users):
+                print(i)
+                print(user_id, xp)
                 # Format each line
-                member = await context.bot.get_chat_member(chat_id, user_id)
-                member = member.user
-                medal = str(i + 1)
-                if i == 0:
-                    medal = "🥇"
-                elif i == 1:
-                    medal = "🥈"
-                elif i == 2:
-                    medal = "🥉"
-                message += f"[{medal}] {member.full_name} ({xp:+})\n"
+                try:
+                    member = await context.bot.get_chat_member(chat_id, user_id)
+                    member = member.user
+                    medal = str(i + 1)
+                    if i == 0:
+                        medal = "🥇"
+                    elif i == 1:
+                        medal = "🥈"
+                    elif i == 2:
+                        medal = "🥉"
+                    message += f"[{medal}] {member.full_name} ({xp:+})\n"
+                except:
+                    pass
 
             if len(top_users) == 0:
                 message += "Por ahora nadie a parte del Nano."

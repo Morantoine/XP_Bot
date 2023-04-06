@@ -49,7 +49,10 @@ class XP_Bot:
         )
         self.app.add_handler(
             MessageHandler(
-                filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS,
+                filters.TEXT
+                & (~filters.COMMAND)
+                & (~filters.UpdateType.EDITED)
+                & filters.ChatType.GROUPS,
                 self.change_xp,
             )
         )

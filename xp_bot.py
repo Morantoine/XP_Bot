@@ -301,8 +301,6 @@ class XP_Bot:
             message = "Los más populares del patio :\n\n"
 
             for i, (user_id, xp) in enumerate(top_users):
-                print(i)
-                print(user_id, xp)
                 # Format each line
                 try:
                     member = await context.bot.get_chat_member(chat_id, user_id)

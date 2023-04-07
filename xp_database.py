@@ -36,6 +36,17 @@ class XPDatabase:
             );
         """
         )
+        cursor.execute(
+            """
+        CREATE TABLE IF NOT EXISTS username (
+            chat_id INTEGER,
+            user_id INTEGER,
+            full_name TEXT,
+            PRIMARY KEY (chat_id, user_id),
+            FOREIGN KEY (chat_id) REFERENCES chat_settings(chat_id)
+        );
+        """
+        )
         self.conn.commit()
         cursor.close()
 
@@ -164,3 +175,45 @@ class XPDatabase:
         )
         self.conn.commit()
         c.close()
+
+    def update_username(self, chat_id, user_id, full_name):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO username (chat_id, user_id, full_name)
+            VALUES (?, ?, ?)
+            ON CONFLICT(chat_id, user_id) DO UPDATE SET full_name = excluded.full_name;
+            """,
+            (chat_id, user_id, full_name),
+        )
+        self.conn.commit()
+        cursor.close()
+
+    def get_stored_username_by_user_id(self, chat_id, user_id):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT full_name FROM username WHERE user_id = ? AND chat_id=?;
+            """,
+            (user_id, chat_id),
+        )
+        result = cursor.fetchone()
+        cursor.close()
+        if result is not None:
+            return result[0]
+        else:
+            return None
+
+    def refresh_username(self, chat_id, user_id, full_name):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+        INSERT INTO username (chat_id, user_id, full_name)
+        VALUES (?, ?, ?)
+        ON CONFLICT(chat_id, user_id) DO UPDATE SET
+        full_name=excluded.full_name;
+        """,
+            (chat_id, user_id, full_name),
+        )
+        self.conn.commit()
+        cursor.close()

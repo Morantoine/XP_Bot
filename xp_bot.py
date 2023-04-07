@@ -184,10 +184,6 @@ class XP_Bot:
         message = update.message
         message_id = message.message_id
 
-        if message is None:
-            # Weird exception to handle
-            return
-
         message_text = message.text.lower()
         chat_id = message.chat_id
 
@@ -274,6 +270,11 @@ class XP_Bot:
                     new_message.message_id, chat_id, context
                 )
 
+                # Update the full name of the reciever with the last known value
+                self.db.refresh_username(
+                    chat_id, reciever_id, reciever_user.user.full_name
+                )
+
     async def delete_refresh_xp_msg(self, new_msg_id, chat_id, context):
         if chat_id in self.last_msg_id:
             # Delete the last sent xp update message
@@ -297,27 +298,28 @@ class XP_Bot:
             )
 
         else:
-            top_users = self.db.get_top_users(chat_id=chat_id, limit=5)
+            top_users = self.db.get_top_users(chat_id=chat_id, limit=10)
             message = "Los más populares del patio :\n\n"
 
             for i, (user_id, xp) in enumerate(top_users):
                 # Format each line
                 try:
+                    # Try to talk directly to Telegram's API
                     member = await context.bot.get_chat_member(chat_id, user_id)
-                    member = member.user
-                    medal = str(i + 1)
-                    if i == 0:
-                        medal = "🥇"
-                    elif i == 1:
-                        medal = "🥈"
-                    elif i == 2:
-                        medal = "🥉"
-                    message += f"[{medal}] {member.full_name} ({xp:+})\n"
+                    full_name = member.user.full_name
                 except:
-                    # faulty_user = await context.bot.get_chat(user_id)
-                    # faulty_username = faulty_user.username
-                    # print(faulty_username)
+                    # If it fails, load the user full name from the stored db
+                    full_name = self.db.get_stored_username_by_user_id(chat_id, user_id)
+                if full_name is None:
                     pass
+                medal = str(i + 1)
+                if i == 0:
+                    medal = "🥇"
+                elif i == 1:
+                    medal = "🥈"
+                elif i == 2:
+                    medal = "🥉"
+                message += f"[{medal}] {full_name} ({xp:+})\n"
 
             if len(top_users) == 0:
                 message += "Por ahora nadie a parte del Nano."

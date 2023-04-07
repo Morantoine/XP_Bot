@@ -135,6 +135,7 @@ class XP_Bot:
                 chat_id=update.effective_chat.id,
                 text="A donde vas desactivando si no había nada.",
             )
+            return
 
         # Do nothing if user doesn't have the necessary rights
         if member.status not in ["creator", "administrator"]:

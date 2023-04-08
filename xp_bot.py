@@ -20,6 +20,7 @@ class XP_Bot:
 
         # Initlialize the dictionnary to track the cooldown
         self.last_changed = {}
+        self.last_top = {}
         self.DELAY_TIME = timedelta(seconds=30)
 
         # Initlialize the value of the last xp update message to only keep one
@@ -183,7 +184,6 @@ class XP_Bot:
     async def change_xp(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler to change the xp"""
         message = update.message
-        message_id = message.message_id
 
         message_text = message.text.lower()
         chat_id = message.chat_id
@@ -278,13 +278,21 @@ class XP_Bot:
 
     async def delete_refresh_xp_msg(self, new_msg_id, chat_id, context):
         if chat_id in self.last_msg_id:
-            # Delete the last sent xp update message
-            if chat_id in self.last_msg_id:
-                await context.bot.delete_message(
-                    chat_id=chat_id, message_id=self.last_msg_id[chat_id]
-                )
+            # Delete last sent xp update message
+            await context.bot.delete_message(
+                chat_id=chat_id, message_id=self.last_msg_id[chat_id]
+            )
         # Keep in track the latest xp change message id
         self.last_msg_id[chat_id] = new_msg_id
+
+    async def delete_refresh_top(self, new_msg_id, chat_id, context):
+        if chat_id in self.last_top:
+            # Delete last sent top message
+            await context.bot.delete_message(
+                chat_id=chat_id, message_id=self.last_top[chat_id]
+            )
+        # Keep in track the latest top message id
+        self.last_top[chat_id] = new_msg_id
 
     async def top_users(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler to display top users and ratings"""
@@ -325,11 +333,13 @@ class XP_Bot:
             if len(top_users) == 0:
                 message += "Por ahora nadie a parte del Nano."
 
-            await context.bot.send_message(
+            new_message = await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 reply_to_message_id=update.message.id,
                 text=message,
             )
+
+            await self.delete_refresh_xp_msg(new_message.message_id, chat_id, context)
 
     async def left_chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler to reset the rating when someone leaves the chat"""

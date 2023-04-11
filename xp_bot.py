@@ -223,8 +223,8 @@ class XP_Bot:
             reciever_status = reciever_user.status
             reciever_name = message.reply_to_message.from_user.name
 
-            if reciever_id == sender_id or reciever_id == self.app.bot.id:
-                # Don't allow people to change their own xp or the bot's xp
+            if reciever_id == sender_id or reciever_user.user.is_bot:
+                # Don't allow people to change their own xp or any bot's xp
                 return
 
             if reciever_status in ["left", "kicked"]:

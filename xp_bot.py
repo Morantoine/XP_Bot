@@ -355,9 +355,7 @@ class XP_Bot:
                 text=message,
             )
 
-            await self.delete_refresh_xp_update(
-                new_message.message_id, chat_id, context
-            )
+            await self.delete_refresh_top(new_message.message_id, chat_id, context)
 
     async def left_chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler to reset the rating when someone leaves the chat"""

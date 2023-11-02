@@ -1,0 +1,23 @@
+{
+  "admin" : {
+    "greeting": "Hey, I'm here to track your XP in any chat. Add me to a chat and launch the /enable command from there.",
+    "group_greeting": "Hey, I'm here to track your XP in this chat. Ask an admin to launch the /enable command and try me out !.",
+    "enabled": "Done! Xp is now tracked in this group.",
+    "enabled_no_rights": "Only admins can enable the bot.",
+    "enabled_already": "I was already enabled in this group.",
+    "enabled_runtime_error": "Something went wrong.",
+    "disabled": "Done! Xp is no longer tracked in this group.",
+    "disabled_already" : "I was already disabled in this group.",
+    "disabled_no_rights" : "Only admins can disable the bot.",
+    "disabled_runtime_error": "Something went wrong.",
+    "leave": "{name} deleted from XP tracking list."
+  },
+  "warn" : "XP tracking is not enabled in this group. Ask an admin to launch the /enable command before tying me out.",
+  "xp" : {
+    "xp_status" : "{name}, you have an XP of {xp}",
+    "wait": "Wait for {time} seconds before changing {name}'s XP",
+    "change": "{sender_medal}{sender_name} ({sender_xp}) has changed reputation of {reciever_medal}{reciever_name} ({reciever_xp})",
+    "popular": "Most popular users are:",
+    "popular_empty": "Nobody for now, come on."
+  }
+}

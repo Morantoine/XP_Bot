@@ -5,13 +5,16 @@ from telegram.ext import (
     filters,
     ContextTypes,
 )
-from telegram import Update, constants
-from xp_database import XPDatabase
-import logging
+from telegram import Update
+from database_queries import XPDatabase
+import os 
+import json
 from collections import defaultdict
 
 from datetime import datetime, timedelta
 
+with open('./message_templates.json', 'r') as file:
+    message_templates = json.load(file)
 
 class XP_Bot:
     def __init__(self, TOKEN) -> None:
@@ -79,7 +82,7 @@ class XP_Bot:
         """Prompt message when you start the bot"""
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text="Klk soy el bot de los mases, agregame a tu grupo y lanza el comando /enable desde ahí.",
+            text=message_templates["admin"]["greeting"]
         )
 
     async def added_to_group(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -88,7 +91,7 @@ class XP_Bot:
             if member.username == "LosMases_bot":
                 await context.bot.send_message(
                     chat_id=update.effective_chat.id,
-                    text="Hola aquí estoy, lanza el comando /enable, y dale un megamás a Fransua para probar.",
+                    text=message_templates["admin"]["group_greeting"]
                 )
 
     async def enable(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -101,14 +104,14 @@ class XP_Bot:
         if self.db.is_chat_enabled(chat_id):
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text="Ya puedes mandar mases y menoses en este grupo.",
+                text=message_templates["admin"]["enabled_already"]
             )
 
         # Do nothing if user doesn't have the necessary rights
         elif member.status not in ["creator", "administrator"]:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text="Sólo los admins pueden activar el bot.",
+                text=message_templates["admin"]["enabled_no_rights"]
             )
 
         else:
@@ -117,13 +120,13 @@ class XP_Bot:
                 await context.bot.send_message(
                     chat_id=update.effective_chat.id,
                     reply_to_message_id=update.message.id,
-                    text="Vamos podeis mandar mases siuuu.",
+                    text=message_templates["admin"]["enabled"]
                 )
             else:
                 await context.bot.send_message(
                     chat_id=update.effective_chat.id,
                     reply_to_message_id=update.message.id,
-                    text="Algo salió mal preguntale al Fransua.",
+                    text=message_templates["admin"]["enabled_runtime_error"]
                 )
 
     async def disable(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -136,15 +139,15 @@ class XP_Bot:
         if not self.db.is_chat_enabled(chat_id):
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text="A donde vas desactivando si no había nada.",
+                text=message_templates["admin"]["disabled_already"]
             )
             return
 
         # Do nothing if user doesn't have the necessary rights
-        if member.status not in ["creator", "administrator"]:
+        if member.status not in ["creator", "administrator"] :
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text="Sólo los admins o el user que añadió el bot lo puede desactivar.",
+                text=message_templates["admin"]["disabled_no_rights"]
             )
             return
 
@@ -153,13 +156,13 @@ class XP_Bot:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 reply_to_message_id=update.message.id,
-                text="A tomar por saco el XP.",
+                text=message_templates["admin"]["disabled"]
             )
         else:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 reply_to_message_id=update.message.id,
-                text="Algo salió mal preguntale al Fransua.",
+                text=message_templates["admin"]["disabled_runtime_error"]
             )
 
     async def check_xp(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -170,12 +173,12 @@ class XP_Bot:
 
         # Check if the chat is enabled for XP tracking
         if not self.db.is_chat_enabled(chat_id):
-            answer = "Los mases no están activados en este grupo."
+            answer = message_templates["admin"]["warn"]
 
         else:
             # Get the user's XP and level
             xp = self.db.get_user_xp(chat_id, user_id)
-            answer = f"{username}, tu reputación es de {xp}."
+            answer = message_templates["xp"]["xp_status"].format(name=username, xp=xp)
 
         new_message = await context.bot.send_message(
             chat_id=update.effective_chat.id,
@@ -208,7 +211,7 @@ class XP_Bot:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 reply_to_message_id=update.message.id,
-                text="Activa el bot con /enable antes de venirte arriba.",
+                text=message_templates["warn"]
             )
 
         # Only take into account messages that answer others
@@ -254,7 +257,7 @@ class XP_Bot:
                     new_message = await context.bot.send_message(
                         chat_id=update.effective_chat.id,
                         reply_to_message_id=update.message.id,
-                        text=f"Espera {int((self.DELAY_TIME - elapsed_time).total_seconds())} segundos antes de volver a cambiar la reputación de {reciever_name}.",
+                        text=message_templates["xp"]["wait"].format(time=int((self.DELAY_TIME - elapsed_time).total_seconds()), name = reciever_name)
                     )
                     await self.delete_refresh_xp_update(
                         new_message.message_id, chat_id, context
@@ -270,7 +273,8 @@ class XP_Bot:
                 new_message = await context.bot.send_message(
                     chat_id=update.effective_chat.id,
                     reply_to_message_id=update.message.id,
-                    text=f"{sender_medal}{sender_name} ({sender_xp}) ha cambiado la reputación de {reciever_medal}{reciever_name} ({old_reciever_xp+xp_amount:+}).",
+                    text=message_templates["xp"]["change"].format(sender_medal=sender_medal, sender_name=sender_name, sender_xp=sender_xp,
+                                                         reciever_medal=reciever_medal, reciever_name=reciever_name, reciever_xp=reciever_xp)
                 )
 
                 await self.delete_refresh_xp_update(
@@ -319,12 +323,12 @@ class XP_Bot:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 reply_to_message_id=update.message.id,
-                text="Activa el bot con /enable antes de venirte arriba.",
+                text=message_templates["warn"]
             )
 
         else:
             top_users = self.db.get_top_users(chat_id=chat_id, limit=10)
-            message = "Los más populares del patio :\n\n"
+            message = message_templates["xp"]["popular"]
 
             for i, (user_id, xp) in enumerate(top_users):
                 # Format each line
@@ -347,7 +351,7 @@ class XP_Bot:
                 message += f"[{medal}] {full_name} ({xp:+})\n"
 
             if len(top_users) == 0:
-                message += "Por ahora nadie a parte del Nano."
+                message += message_templates["xp"]["empty"]
 
             new_message = await context.bot.send_message(
                 chat_id=update.effective_chat.id,
@@ -367,5 +371,5 @@ class XP_Bot:
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             reply_to_message_id=update.message.id,
-            text=f"{user_name} borrado de la lista de mases.",
+            text=message_templates["admin"]["leave"]
         )

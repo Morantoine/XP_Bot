@@ -9,7 +9,7 @@ BOT_USERNAME = "LosMases"
 class XPDatabase:
     """SQLite database for storing XP data."""
 
-    def __init__(self, db_name="xp_data.db"):
+    def __init__(self, db_name="./xp_data.db"):
         self.db_name = db_name
         self.conn = sqlite3.connect(self.db_name)
         self._create_tables()

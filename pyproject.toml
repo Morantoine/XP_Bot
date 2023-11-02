@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "xp-bot"
+version = "0.1.0"
+description = ""
+authors = ["Morantoine <antoine.moran@protonmail.com>"]
+readme = "README.md"
+packages = [
+    {include = "bot"},
+    {include = "database_queries"},
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+python-telegram-bot = "^20.6"
+setuptools = "^68.2.2"
+python-dotenv = "^1.0.0"
+hatchling = "^1.18.0"
+flit-core = "^3.9.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry.scripts]
+xp-bot = "bot:start"

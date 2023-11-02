@@ -1,7 +1,9 @@
 # Don't add your private token to the repo !
 .env
+.direnv
 # Python garbage
 __pycache__/
+database_queries/__pycache__/
 venv/
 # Database depends on you
 xp_data.db

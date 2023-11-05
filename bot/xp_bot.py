@@ -327,7 +327,7 @@ class XP_Bot:
 
         else:
             top_users = self.db.get_top_users(chat_id=chat_id, limit=10)
-            message = message_templates["xp"]["popular"]
+            message = message_templates["xp"]["popular"] + "\n"
 
             for i, (user_id, xp) in enumerate(top_users):
                 # Format each line

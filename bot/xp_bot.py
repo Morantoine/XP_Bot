@@ -273,7 +273,8 @@ class XP_Bot:
                 new_message = await context.bot.send_message(
                     chat_id=update.effective_chat.id,
                     reply_to_message_id=update.message.id,
-                    text=message_templates["xp"]["change"].format(sender_medal=sender_medal, sender_name=sender_name, sender_xp=sender_xp, reciever_medal=reciever_medal, reciever_name=reciever_name, reciever_xp=old_reciever_xp+xp_amount)
+                    text=message_templates["xp"]["change"].format(sender_medal=sender_medal, sender_name=sender_name, sender_xp=sender_xp,
+                                                         reciever_medal=reciever_medal, reciever_name=reciever_name, reciever_xp=old_reciever_xp+xp_amount)
                 )
 
                 await self.delete_refresh_xp_update(
@@ -370,5 +371,5 @@ class XP_Bot:
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             reply_to_message_id=update.message.id,
-            text=message_templates["admin"]["leave"]
+            text=message_templates["admin"]["leave"].format(name=user_name)
         )

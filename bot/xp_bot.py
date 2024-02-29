@@ -16,6 +16,9 @@ from datetime import datetime, timedelta
 with open('./message_templates.json', 'r') as file:
     message_templates = json.load(file)
 
+with open('./plus_minus.json', 'r') as file:
+    plus_minus_triggers = json.load(file)
+
 class XP_Bot:
     def __init__(self, TOKEN) -> None:
         # Start the app and start/load the database
@@ -197,13 +200,19 @@ class XP_Bot:
         message_text = message.text.lower()
         chat_id = message.chat_id
 
-        mases = ["+", "++", "mega+", "megamas", "megamás"]
+        simple_plus_triggers = plus_minus_triggers["simple_plus"]
+        simple_minus_triggers = plus_minus_triggers["simple_minus"]
+        double_minus_triggers = plus_minus_triggers["double_minus"]
+        double_plus_triggers = plus_minus_triggers["double_plus"]
+
+        plus_triggers = simple_plus_triggers + double_plus_triggers
+        minus_triggers = simple_minus_triggers + double_minus_triggers
         menoses = ["-", "--", "mega-", "megamenos"]
 
-        todo = mases + menoses
+        all_triggers = plus_triggers + minus_triggers
 
-        # Only check messages that is exactly one of the accepted
-        if not message_text in todo:
+        # Only check messages that are exactly one of the accepted
+        if not message_text in all_triggers:
             return
 
         # Do nothing if the chat is not enabled
@@ -238,13 +247,13 @@ class XP_Bot:
             old_reciever_xp = self.db.get_user_xp(chat_id, reciever_id)
             sender_xp = self.db.get_user_xp(chat_id, sender_id)
 
-            if message_text == "+":
+            if message_text in simple_plus_triggers:
                 xp_amount = 1
-            elif message_text in ["++", "mega+", "megamas", "megamás"]:
+            elif message_text in double_plus_triggers:
                 xp_amount = 2
-            elif message_text == "-":
+            elif message_text in simple_minus_triggers:
                 xp_amount = -1
-            elif message_text in ["--", "mega-", "megamenos"]:
+            elif message_text in double_minus_triggers:
                 xp_amount = -2
             if xp_amount != 0:
 

@@ -25,7 +25,7 @@
           editables = super.editables.overridePythonAttrs
           (
             old: {
-              buildInputs = (old.buildInputs or [ ]) ++ [ super.flit-core ];
+              buildInputs = (old.buildInputs or [ ]) ++ [ super.flit-core super.setuptools];
             }
           );
         });

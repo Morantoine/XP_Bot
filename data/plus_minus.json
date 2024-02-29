@@ -1,6 +1,6 @@
 {
-  "simple_plus" = ["+"],
-  "simple_minus" = ["-"],
-  "double_plus" = ["++", "megaplus", "mega+"],
-  "double_minus" = ["--", "megaminus", "mega-"]
+  "simple_plus" : ["+"],
+  "simple_minus" : ["-"],
+  "double_plus" : ["++", "megaplus", "mega+"],
+  "double_minus" : ["--", "megaminus", "mega-"]
 }

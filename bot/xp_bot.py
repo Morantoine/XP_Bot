@@ -34,49 +34,42 @@ class XP_Bot:
         self.last_xp_update = {}
         self.last_xp_info = defaultdict(lambda: defaultdict(int))
 
+        self.add_handlers()
+    
+    def add_handlers(self):
         # Add all the functionnality handlers
-        self.app.add_handler(CommandHandler("start", self.start))
-        self.app.add_handler(
-            CommandHandler(
-                "enable", self.enable, filters=filters.TEXT & filters.ChatType.GROUPS
-            )
-        )
-        self.app.add_handler(
-            CommandHandler(
-                "disable", self.disable, filters=filters.TEXT & filters.ChatType.GROUPS
-            )
-        )
-        self.app.add_handler(
-            CommandHandler(
-                "xp", self.check_xp, filters=filters.TEXT & filters.ChatType.GROUPS
-            )
-        )
-        self.app.add_handler(
-            CommandHandler(
-                "top", self.top_users, filters=filters.TEXT & filters.ChatType.GROUPS
-            )
-        )
-        self.app.add_handler(
-            MessageHandler(
-                filters.TEXT
-                & (~filters.COMMAND)
-                & (~filters.UpdateType.EDITED)
-                & filters.ChatType.GROUPS,
-                self.change_xp,
-            )
-        )
-        self.app.add_handler(
-            MessageHandler(
-                filters.ChatType.GROUPS & filters.StatusUpdate.LEFT_CHAT_MEMBER,
-                self.left_chat,
-            )
-        )
-        self.app.add_handler(
-            MessageHandler(
-                filters.StatusUpdate.NEW_CHAT_MEMBERS,
-                self.added_to_group,
-            )
-        )
+        handlers = [
+            ("start", self.start),
+            ("enable", self.enable, filters.TEXT & filters.ChatType.GROUPS),
+            ("disable", self.disable, filters.TEXT & filters.ChatType.GROUPS),
+            ("xp", self.check_xp, filters.TEXT & filters.ChatType.GROUPS),
+            ("top", self.top_users, filters.TEXT & filters.ChatType.GROUPS),
+            (
+                MessageHandler(
+                    filters.TEXT
+                    & (~filters.COMMAND)
+                    & (~filters.UpdateType.EDITED)
+                    & filters.ChatType.GROUPS,
+                    self.change_xp,
+                )
+            ),
+            (
+                MessageHandler(
+                    filters.ChatType.GROUPS & filters.StatusUpdate.LEFT_CHAT_MEMBER,
+                    self.left_chat,
+                )
+            ),
+            (
+                MessageHandler(
+                    filters.StatusUpdate.NEW_CHAT_MEMBERS,
+                    self.added_to_group,
+                )
+            ),
+        ]
+
+        for handler in handlers:
+            command, function, filter = handler[0], handler[1], handler[2] if len(handler) > 2 else None
+            self.app.add_handler(CommandHandler(command, function, filter))
 
     def run(self) -> None:
         self.app.run_polling()
@@ -207,7 +200,6 @@ class XP_Bot:
 
         plus_triggers = simple_plus_triggers + double_plus_triggers
         minus_triggers = simple_minus_triggers + double_minus_triggers
-        menoses = ["-", "--", "mega-", "megamenos"]
 
         all_triggers = plus_triggers + minus_triggers
 

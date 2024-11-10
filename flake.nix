@@ -19,7 +19,7 @@
     {
       packages.${system} = {
         xp-bot = mkPoetryApplication {
-        projectDir = self;
+        projectDir = ./.;
         overrides = defaultPoetryOverrides.extend
         (self: super: {
           editables = super.editables.overridePythonAttrs

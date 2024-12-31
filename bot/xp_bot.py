@@ -90,8 +90,9 @@ class XP_Bot:
 
     async def added_to_group(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Prompt message when you add the bot to a group"""
+
         for member in update.message.new_chat_members:
-            if member.username == "LosMases_bot":
+            if member.is_bot and member.id == context.bot.id:
                 await context.bot.send_message(
                     chat_id=update.effective_chat.id,
                     text=message_templates["admin"]["group_greeting"]
@@ -377,8 +378,9 @@ class XP_Bot:
         user_id = user.id
         user_name = user.name
         self.db.remove_user(user_id, chat_id)
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            reply_to_message_id=update.message.id,
-            text=message_templates["admin"]["leave"].format(name=user_name)
-        )
+        if user_id != context.bot.id:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                reply_to_message_id=update.message.id,
+                text=message_templates["admin"]["leave"].format(name=user_name)
+            )

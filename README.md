@@ -13,4 +13,4 @@ Run the default bot with docker (recommended) :
 - Talk to the bot in private to setup everything !
 
 Otherwise, if you want to modify the code, you can try to set up the poetry env (with the Nix flake it's easy) by your own.
-To backup the scores, simply backup the database loacted at `/data/xp_data.db`.
+To backup the scores, simply backup the database located at `/data/xp_data.db`.

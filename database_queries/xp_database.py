@@ -3,8 +3,6 @@ from telegram import Update, User
 from typing import Optional
 import logging
 
-BOT_USERNAME = "LosMases"
-
 
 class XPDatabase:
     """SQLite database for storing XP data."""

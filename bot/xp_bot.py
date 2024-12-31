@@ -11,6 +11,12 @@ import os
 import json
 from collections import defaultdict
 
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import asyncio
+import shutil
+from pytz import timezone
+
 from datetime import datetime, timedelta
 
 with open('./message_templates.json', 'r') as file:
@@ -20,10 +26,14 @@ with open('./plus_minus.json', 'r') as file:
     plus_minus_triggers = json.load(file)
 
 class XP_Bot:
-    def __init__(self, TOKEN) -> None:
+    def __init__(self, TOKEN, ERASE_NEW_YEAR) -> None:
         # Start the app and start/load the database
         self.app = ApplicationBuilder().token(TOKEN).build()
         self.db = XPDatabase()
+        self.groups = set()
+        self.scheduler = BackgroundScheduler(timezone=timezone("Europe/Paris"))
+        self.scheduler.start()
+        self.erase_new_year = ERASE_NEW_YEAR
 
         # Initlialize the dictionnary to track the cooldown
         self.last_changed = {}
@@ -78,6 +88,8 @@ class XP_Bot:
             )
         )
 
+        self.schedule_new_year_message()
+
     def run(self) -> None:
         self.app.run_polling()
 
@@ -90,6 +102,8 @@ class XP_Bot:
 
     async def added_to_group(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Prompt message when you add the bot to a group"""
+        chat_id = update.message.chat_id
+        self.groups.add(chat_id)
 
         for member in update.message.new_chat_members:
             if member.is_bot and member.id == context.bot.id:
@@ -200,6 +214,8 @@ class XP_Bot:
 
         message_text = message.text.lower()
         chat_id = message.chat_id
+
+        self.groups.add(chat_id)
 
         simple_plus_triggers = plus_minus_triggers["simple_plus"]
         simple_minus_triggers = plus_minus_triggers["simple_minus"]
@@ -361,7 +377,7 @@ class XP_Bot:
                 message += f"[{medal}] {full_name} ({xp:+})\n"
 
             if len(top_users) == 0:
-                message += message_templates["xp"]["empty"]
+                message += message_templates["xp"]["popular_empty"]
 
             new_message = await context.bot.send_message(
                 chat_id=update.effective_chat.id,
@@ -370,6 +386,50 @@ class XP_Bot:
             )
 
             await self.delete_refresh_top(new_message.message_id, chat_id, context)
+
+    async def send_new_year_message(self, context):
+        current_year = datetime.now().year
+
+        for chat_id in self.groups :
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text = message_templates["admin"]["new_year_greeting"].format(year=current_year)
+            )
+
+        if self.erase_new_year:
+            for chat_id in self.groups :
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=message_templates["admin"]["new_year_deletion"]
+                )
+            try:
+                shutil.move("./xp_data.db", f"./xp_data_{current_year}.db")
+                print("File moved successfully.")
+                self.db = XPDatabase()
+            except Exception as e:
+                print(f"Error moving file: {e}") 
+
+    # Wrapper function for APScheduler
+    def send_new_year_message_job(self, app, loop):
+        asyncio.run_coroutine_threadsafe(
+            self.send_new_year_message(app),
+            loop
+        )
+
+
+    def schedule_new_year_message(self):
+        loop = asyncio.get_event_loop()
+        self.scheduler.add_job(
+            self.send_new_year_message_job, 
+            CronTrigger(
+                month=1, day=1, hour=0, minute=0, second=0,
+                timezone=timezone("Europe/Paris")
+            ),
+            args=[self.app, loop],
+            id="new_year_greeting",
+            replace_existing=True
+        )
+
 
     async def left_chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler to reset the rating when someone leaves the chat"""

@@ -16,6 +16,8 @@ setuptools = ">=68.2.2"
 python-dotenv = "^1.0.0"
 hatchling = "^1.18.0"
 flit-core = "^3.9.0"
+apscheduler = "^3.11.0"
+pytz = "^2024.2"
 
 
 [build-system]

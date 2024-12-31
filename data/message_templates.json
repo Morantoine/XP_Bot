@@ -2,6 +2,8 @@
   "admin" : {
     "greeting": "Hey, I'm here to track your XP in any chat. Add me to a chat and launch the /enable command from there.",
     "group_greeting": "Hey, I'm here to track your XP in this chat. Ask an admin to launch the /enable command and try me out !.",
+    "new_year_greeting": "Happy new year {year} everyone!",
+    "new_year_deletion": "XP ratings deleted, enjoy the fresh start!",
     "enabled": "Done! Xp is now tracked in this group.",
     "enabled_no_rights": "Only admins can enable the bot.",
     "enabled_already": "I was already enabled in this group.",

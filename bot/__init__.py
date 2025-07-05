@@ -8,7 +8,8 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 
-def start() :
+
+def start():
     load_dotenv()
     TOKEN = os.environ.get("TOKEN")
     ERASE_NEW_YEAR = os.environ.get("ERASE_NEW_YEAR")

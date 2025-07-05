@@ -6,7 +6,7 @@ authors = [{ name = "Morantoine", email = "antoine.moran@protonmail.com" }]
 requires-python = "~=3.10"
 readme = "README.md"
 dependencies = [
-    "python-telegram-bot~=20.6",
+    "python-telegram-bot~=22.2",
     "setuptools>=68.2.2",
     "python-dotenv>=1.0.0,<2",
     "hatchling>=1.18.0,<2",

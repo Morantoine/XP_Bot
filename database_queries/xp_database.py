@@ -271,4 +271,4 @@ class XPDatabase:
         if result is not None:
             return result[0]
         else:
-            return None
+            return 30

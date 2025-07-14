@@ -45,6 +45,15 @@ class XPDatabase:
         );
         """
         )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS chat_cooldown (
+                chat_id INTEGER PRIMARY KEY,
+                cooldown_seconds INTEGER NOT NULL DEFAULT 30,
+                FOREIGN KEY (chat_id) REFERENCES chat_settings(chat_id)
+            );
+            """
+        )
         self.conn.commit()
         cursor.close()
 
@@ -58,6 +67,14 @@ class XPDatabase:
                 VALUES (?, 1)
                 ON CONFLICT(chat_id) DO UPDATE SET xp_enabled=1;
             """,
+                (chat_id,),
+            )
+            cursor.execute(
+                """
+                INSERT INTO chat_cooldown (chat_id)
+                VALUES (?)
+                ON CONFLICT(chat_id) DO NOTHING;
+                """,
                 (chat_id,),
             )
             self.conn.commit()
@@ -75,6 +92,12 @@ class XPDatabase:
                 INSERT INTO chat_settings (chat_id, xp_enabled)
                 VALUES (?, 0)
                 ON CONFLICT(chat_id) DO UPDATE SET xp_enabled=0;
+            """,
+                (chat_id,),
+            )
+            cursor.execute(
+                """
+            DELETE FROM chat_cooldown WHERE chat_id = ?;
             """,
                 (chat_id,),
             )
@@ -169,7 +192,8 @@ class XPDatabase:
     def remove_user(self, user_id, chat_id):
         c = self.conn.cursor()
         c.execute(
-            "DELETE FROM user_xp WHERE chat_id=? AND user_id=?", (chat_id, user_id)
+            "DELETE FROM user_xp WHERE chat_id=? AND user_id=?", (
+                chat_id, user_id)
         )
         self.conn.commit()
         c.close()
@@ -215,3 +239,36 @@ class XPDatabase:
         )
         self.conn.commit()
         cursor.close()
+
+    def set_chat_cooldown(self, chat_id, seconds):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO chat_cooldown (chat_id, cooldown_seconds)
+                VALUES (?, ?)
+                ON CONFLICT(chat_id) DO UPDATE SET cooldown_seconds = excluded.cooldown_seconds;
+                """,
+                (chat_id, seconds),
+            )
+            self.conn.commit()
+            cursor.close()
+            return True
+        except sqlite3.Error as _:
+            return False
+
+    def get_chat_cooldown(self, chat_id):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT cooldown_seconds FROM chat_cooldown
+            WHERE chat_id = ?;
+            """,
+            (chat_id,),
+        )
+        result = cursor.fetchone()
+        cursor.close()
+        if result is not None:
+            return result[0]
+        else:
+            return None

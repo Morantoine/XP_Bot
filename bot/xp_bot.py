@@ -7,7 +7,7 @@ from telegram.ext import (
 )
 from telegram import Update
 from database_queries import XPDatabase
-import os 
+import os
 import json
 from collections import defaultdict
 
@@ -25,6 +25,7 @@ with open('./message_templates.json', 'r') as file:
 with open('./plus_minus.json', 'r') as file:
     plus_minus_triggers = json.load(file)
 
+
 class XP_Bot:
     def __init__(self, TOKEN, ERASE_NEW_YEAR) -> None:
         # Start the app and start/load the database
@@ -38,7 +39,6 @@ class XP_Bot:
         # Initlialize the dictionnary to track the cooldown
         self.last_changed = {}
         self.last_top = {}
-        self.DELAY_TIME = timedelta(seconds=30)
 
         # Initlialize the value of the last xp update and info messages to only keep one
         self.last_xp_update = {}
@@ -64,6 +64,11 @@ class XP_Bot:
         self.app.add_handler(
             CommandHandler(
                 "top", self.top_users, filters=filters.TEXT & filters.ChatType.GROUPS
+            )
+        )
+        self.app.add_handler(
+            CommandHandler(
+                "setcooldown", self.set_chat_cooldown, filters=filters.TEXT & filters.ChatType.GROUPS
             )
         )
         self.app.add_handler(
@@ -122,6 +127,7 @@ class XP_Bot:
         if self.db.is_chat_enabled(chat_id):
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
+                reply_to_message_id=update.message.id,
                 text=message_templates["admin"]["enabled_already"]
             )
 
@@ -162,7 +168,7 @@ class XP_Bot:
             return
 
         # Do nothing if user doesn't have the necessary rights
-        if member.status not in ["creator", "administrator"] :
+        if member.status not in ["creator", "administrator"]:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text=message_templates["admin"]["disabled_no_rights"]
@@ -183,6 +189,59 @@ class XP_Bot:
                 text=message_templates["admin"]["disabled_runtime_error"]
             )
 
+    async def set_chat_cooldown(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_id = update.message.from_user.id
+        chat_id = update.message.chat_id
+
+        # Check if the chat is enabled for XP tracking
+        if not self.db.is_chat_enabled(chat_id):
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=message_templates["warn"]
+            )
+            return
+
+        member = await context.bot.get_chat_member(chat_id, user_id)
+
+        # Do nothing if user doesn't have the necessary rights
+        if member.status not in ["creator", "administrator"]:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=message_templates["admin"]["cooldown_no_rights"]
+            )
+            return
+
+        if len(context.args) != 1:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=message_templates["admin"]["cooldown_error"]
+            )
+            return
+
+        if not context.args[0].isdigit() or int(context.args[0]) < 0 or int(context.args[0]) > 86400:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=message_templates["admin"]["cooldown_error"]
+            )
+            return
+
+        seconds = int(context.args[0])
+        success = self.db.set_chat_cooldown(chat_id, seconds)
+
+        if success:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                reply_to_message_id=update.message.id,
+                text=message_templates["admin"]["cooldown_status"].format(
+                    cooldown=seconds)
+            )
+        else:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                reply_to_message_id=update.message.id,
+                text=message_templates["admin"]["disabled_runtime_error"]
+            )
+
     async def check_xp(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler for the /xp command, to check your rating."""
         user_id = update.message.from_user.id
@@ -191,12 +250,13 @@ class XP_Bot:
 
         # Check if the chat is enabled for XP tracking
         if not self.db.is_chat_enabled(chat_id):
-            answer = message_templates["admin"]["warn"]
+            answer = message_templates["warn"]
 
         else:
             # Get the user's XP and level
             xp = self.db.get_user_xp(chat_id, user_id)
-            answer = message_templates["xp"]["xp_status"].format(name=username, xp=xp)
+            answer = message_templates["xp"]["xp_status"].format(
+                name=username, xp=xp)
 
         new_message = await context.bot.send_message(
             chat_id=update.effective_chat.id,
@@ -264,6 +324,9 @@ class XP_Bot:
             old_reciever_xp = self.db.get_user_xp(chat_id, reciever_id)
             sender_xp = self.db.get_user_xp(chat_id, sender_id)
 
+            chat_cooldown = timedelta(
+                seconds=self.db.get_chat_cooldown(chat_id))
+
             if message_text in simple_plus_triggers:
                 xp_amount = 1
             elif message_text in double_plus_triggers:
@@ -279,11 +342,12 @@ class XP_Bot:
                     (sender_id, reciever_id), datetime.min
                 )
                 elapsed_time = datetime.now() - last_change_time
-                if elapsed_time < self.DELAY_TIME:
+                if elapsed_time < chat_cooldown:
                     new_message = await context.bot.send_message(
                         chat_id=update.effective_chat.id,
                         reply_to_message_id=update.message.id,
-                        text=message_templates["xp"]["wait"].format(time=int((self.DELAY_TIME - elapsed_time).total_seconds()), name = reciever_name)
+                        text=message_templates["xp"]["wait"].format(
+                            time=int((chat_cooldown - elapsed_time).total_seconds()), name=reciever_name)
                     )
                     await self.delete_refresh_xp_update(
                         new_message.message_id, chat_id, context
@@ -293,14 +357,16 @@ class XP_Bot:
                 self.last_changed[(sender_id, reciever_id)] = datetime.now()
 
                 self.db.update_user_xp(chat_id, reciever_id, xp_amount)
-                sender_medal = self.db.get_medal(chat_id=chat_id, user_id=sender_id)
-                reciever_medal = self.db.get_medal(chat_id=chat_id, user_id=reciever_id)
+                sender_medal = self.db.get_medal(
+                    chat_id=chat_id, user_id=sender_id)
+                reciever_medal = self.db.get_medal(
+                    chat_id=chat_id, user_id=reciever_id)
 
                 new_message = await context.bot.send_message(
                     chat_id=update.effective_chat.id,
                     reply_to_message_id=update.message.id,
                     text=message_templates["xp"]["change"].format(sender_medal=sender_medal, sender_name=sender_name, sender_xp=sender_xp,
-                                                         reciever_medal=reciever_medal, reciever_name=reciever_name, reciever_xp=old_reciever_xp+xp_amount)
+                                                                  reciever_medal=reciever_medal, reciever_name=reciever_name, reciever_xp=old_reciever_xp+xp_amount)
                 )
 
                 await self.delete_refresh_xp_update(
@@ -364,7 +430,8 @@ class XP_Bot:
                     full_name = member.user.full_name
                 except:
                     # If it fails, load the user full name from the stored db
-                    full_name = self.db.get_stored_username_by_user_id(chat_id, user_id)
+                    full_name = self.db.get_stored_username_by_user_id(
+                        chat_id, user_id)
                 if full_name is None:
                     pass
                 medal = str(i + 1)
@@ -390,14 +457,15 @@ class XP_Bot:
     async def send_new_year_message(self, context):
         current_year = datetime.now().year
 
-        for chat_id in self.groups :
+        for chat_id in self.groups:
             await context.bot.send_message(
                 chat_id=chat_id,
-                text = message_templates["admin"]["new_year_greeting"].format(year=current_year)
+                text=message_templates["admin"]["new_year_greeting"].format(
+                    year=current_year)
             )
 
         if self.erase_new_year:
-            for chat_id in self.groups :
+            for chat_id in self.groups:
                 await context.bot.send_message(
                     chat_id=chat_id,
                     text=message_templates["admin"]["new_year_deletion"]
@@ -407,7 +475,7 @@ class XP_Bot:
                 print("File moved successfully.")
                 self.db = XPDatabase()
             except Exception as e:
-                print(f"Error moving file: {e}") 
+                print(f"Error moving file: {e}")
 
     # Wrapper function for APScheduler
     def send_new_year_message_job(self, app, loop):
@@ -416,11 +484,10 @@ class XP_Bot:
             loop
         )
 
-
     def schedule_new_year_message(self):
         loop = asyncio.get_event_loop()
         self.scheduler.add_job(
-            self.send_new_year_message_job, 
+            self.send_new_year_message_job,
             CronTrigger(
                 month=1, day=1, hour=0, minute=0, second=0,
                 timezone=timezone("Europe/Paris")
@@ -429,7 +496,6 @@ class XP_Bot:
             id="new_year_greeting",
             replace_existing=True
         )
-
 
     async def left_chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler to reset the rating when someone leaves the chat"""

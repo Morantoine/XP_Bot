@@ -135,6 +135,7 @@ class XP_Bot:
         elif member.status not in ["creator", "administrator"]:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
+                reply_to_message_id=update.message.id,
                 text=message_templates["admin"]["enabled_no_rights"]
             )
 
@@ -163,6 +164,7 @@ class XP_Bot:
         if not self.db.is_chat_enabled(chat_id):
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
+                reply_to_message_id=update.message.id,
                 text=message_templates["admin"]["disabled_already"]
             )
             return
@@ -171,6 +173,7 @@ class XP_Bot:
         if member.status not in ["creator", "administrator"]:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
+                reply_to_message_id=update.message.id,
                 text=message_templates["admin"]["disabled_no_rights"]
             )
             return
@@ -197,6 +200,7 @@ class XP_Bot:
         if not self.db.is_chat_enabled(chat_id):
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
+                reply_to_message_id=update.message.id,
                 text=message_templates["warn"]
             )
             return
@@ -207,6 +211,7 @@ class XP_Bot:
         if member.status not in ["creator", "administrator"]:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
+                reply_to_message_id=update.message.id,
                 text=message_templates["admin"]["cooldown_no_rights"]
             )
             return
@@ -214,6 +219,7 @@ class XP_Bot:
         if len(context.args) != 1:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
+                reply_to_message_id=update.message.id,
                 text=message_templates["admin"]["cooldown_error"]
             )
             return
@@ -221,6 +227,7 @@ class XP_Bot:
         if not context.args[0].isdigit() or int(context.args[0]) < 0 or int(context.args[0]) > 86400:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
+                reply_to_message_id=update.message.id,
                 text=message_templates["admin"]["cooldown_error"]
             )
             return
@@ -284,12 +291,11 @@ class XP_Bot:
 
         plus_triggers = simple_plus_triggers + double_plus_triggers
         minus_triggers = simple_minus_triggers + double_minus_triggers
-        menoses = ["-", "--", "mega-", "megamenos"]
 
         all_triggers = plus_triggers + minus_triggers
 
         # Only check messages that are exactly one of the accepted
-        if not message_text in all_triggers:
+        if message_text not in all_triggers:
             return
 
         # Do nothing if the chat is not enabled
@@ -428,7 +434,7 @@ class XP_Bot:
                     # Try to talk directly to Telegram's API
                     member = await context.bot.get_chat_member(chat_id, user_id)
                     full_name = member.user.full_name
-                except:
+                except Exception as e:
                     # If it fails, load the user full name from the stored db
                     full_name = self.db.get_stored_username_by_user_id(
                         chat_id, user_id)
